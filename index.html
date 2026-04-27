@@ -9,14 +9,14 @@
 
     body {
       min-height: 100vh;
-      background: radial-gradient(ellipse at top, #0D23C9 0%, #0C121D 60%);
+      background: #0C121D;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       font-family: 'Segoe UI', sans-serif;
       color: #ECEEFE;
-      overflow: hidden;
+      overflow-x: hidden;
     }
 
     h1 {
@@ -35,9 +35,12 @@
     p.subtitle {
       font-size: 1rem;
       color: rgba(236, 238, 254, 0.55);
-      margin-bottom: 36px;
+      margin-bottom: 28px;
       letter-spacing: 1px;
+      text-align: center;
     }
+
+    .spin-counter { display: none; }
 
     .wheel-wrapper {
       position: relative;
@@ -45,7 +48,6 @@
       height: 420px;
     }
 
-    /* Outer glow ring */
     .wheel-wrapper::before {
       content: '';
       position: absolute;
@@ -58,9 +60,7 @@
       filter: blur(8px);
     }
 
-    @keyframes spin-glow {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin-glow { to { transform: rotate(360deg); } }
 
     canvas#wheel {
       position: relative;
@@ -69,7 +69,6 @@
       box-shadow: 0 0 40px rgba(13, 35, 201, 0.5);
     }
 
-    /* Pointer / arrow */
     .pointer {
       position: absolute;
       top: 50%;
@@ -84,7 +83,6 @@
       filter: drop-shadow(0 0 8px rgba(236, 238, 254, 0.8));
     }
 
-    /* Center hub */
     .hub {
       position: absolute;
       top: 50%;
@@ -100,7 +98,7 @@
     }
 
     .btn-spin {
-      margin-top: 40px;
+      margin-top: 32px;
       padding: 16px 56px;
       font-size: 1.2rem;
       font-weight: 700;
@@ -113,7 +111,6 @@
       cursor: pointer;
       box-shadow: 0 6px 24px rgba(13, 35, 201, 0.5);
       transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
-      z-index: 5;
     }
 
     .btn-spin:hover:not(:disabled) {
@@ -122,12 +119,34 @@
       box-shadow: 0 10px 32px rgba(13, 35, 201, 0.7);
     }
 
-    .btn-spin:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    .btn-spin:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+      max-width: 500px;
     }
 
-    /* Result overlay */
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: rgba(236, 238, 254, 0.75);
+    }
+
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1px solid rgba(236,238,254,0.3);
+    }
+
+    /* ── Result modal ── */
     .result-overlay {
       display: none;
       position: fixed;
@@ -138,9 +157,7 @@
       justify-content: center;
     }
 
-    .result-overlay.show {
-      display: flex;
-    }
+    .result-overlay.show { display: flex; }
 
     .result-card {
       background: linear-gradient(135deg, #0C121D, #0D1A3A);
@@ -165,10 +182,7 @@
       margin-bottom: 16px;
     }
 
-    .result-emoji {
-      font-size: 4rem;
-      margin-bottom: 16px;
-    }
+    .result-emoji { font-size: 4rem; margin-bottom: 16px; }
 
     .result-title {
       font-size: 1rem;
@@ -197,37 +211,10 @@
       background: transparent;
       color: #ECEEFE;
       cursor: pointer;
-      transition: background 0.2s, color 0.2s;
+      transition: background 0.2s;
     }
 
-    .btn-close:hover {
-      background: #0D23C9;
-      color: #ECEEFE;
-    }
-
-    .legend {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-top: 24px;
-      max-width: 500px;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.82rem;
-      color: rgba(236, 238, 254, 0.75);
-    }
-
-    .legend-dot {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
+    .btn-close:hover { background: #0D23C9; }
   </style>
 </head>
 <body>
@@ -242,74 +229,62 @@
   </div>
 
   <button class="btn-spin" id="spinBtn" onclick="spin()">Tourner</button>
-
+  <div class="spin-counter" id="spinCounter"></div>
   <div class="legend" id="legend"></div>
 
-  <!-- Result modal -->
+  <!-- Modal résultat -->
   <div class="result-overlay" id="resultOverlay">
     <div class="result-card">
       <div id="resultMedia"></div>
-      <div class="result-title">Felicitations ! Vous avez gagne :</div>
+      <div class="result-title">Félicitations ! Vous avez gagné :</div>
       <div class="result-prize" id="resultPrize"></div>
       <button class="btn-close" onclick="closeResult()">Rejouer</button>
     </div>
   </div>
 
   <script>
-    // 4 shades derived from #0D23C9 and #ECEEFE palette
+    const pokemonColors = ['#0D23C9','#1A30CF','#0A1A9A','#2C41DC','#0D23C9','#1A30CF','#0A1A9A','#2C41DC','#0D23C9','#1A30CF'];
+
     const segments = [
-      { label: "1 Booster\nPokemon",  weight: 75, color: "#0D23C9", image: "pokemon.png" },
-      { label: "10€ de\nreduction",   weight: 12, color: "#2C41DC", emoji: "💸" },
-      { label: "Une Paire\nOfferte",  weight: 8,  color: "#0A1A9A", emoji: "👟" },
-      { label: "Paire de\nAirPods",   weight: 5,  color: "#4A5EE8", image: "airpods.png" },
+      ...pokemonColors.map((color, i) => ({
+        id: `pk${i+1}`, label: "1 Booster\nPokémon", weight: 9, color, image: "pokemon.png"
+      })),
+      { id: 'paire',   label: "Une Paire\nOfferte", weight: 10, color: "#4A5EE8", image: "sneakers.png" },
+      { id: 'airpods', label: "Paire de\nAirPods",  weight: 0,  color: "#3347D4", image: "airpods.png" },
     ];
 
-    const total = segments.reduce((s, x) => s + x.weight, 0);
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
     const radius = 196;
 
-    let currentAngle = 0;
+    let spinCount    = parseInt(localStorage.getItem('spinCount')   || '0');
+    let currentAngle = parseFloat(localStorage.getItem('wheelAngle') || '0');
     let spinning = false;
 
-    // Preload images
+    /* ─── Preload images ─── */
     const loadedImages = {};
-    let imagesToLoad = 0;
     let imagesLoaded = 0;
+    const imageKeys = [...new Set(segments.filter(s => s.image).map(s => s.image))];
 
     function preloadImages(callback) {
-      const imageSegments = segments.filter(s => s.image);
-      imagesToLoad = imageSegments.length;
-      if (imagesToLoad === 0) { callback(); return; }
-
-      for (const seg of imageSegments) {
+      if (imageKeys.length === 0) { callback(); return; }
+      imageKeys.forEach(src => {
         const img = new Image();
-        img.onload = () => {
-          imagesLoaded++;
-          if (imagesLoaded === imagesToLoad) callback();
-        };
-        img.onerror = () => {
-          imagesLoaded++;
-          if (imagesLoaded === imagesToLoad) callback();
-        };
-        img.src = seg.image;
-        loadedImages[seg.image] = img;
-      }
+        img.onload = img.onerror = () => { if (++imagesLoaded === imageKeys.length) callback(); };
+        img.src = src;
+        loadedImages[src] = img;
+      });
     }
 
+    /* ─── Arcs ─── */
     function getArcs() {
-      const arcs = [];
-      let start = 0;
       const sweep = (2 * Math.PI) / segments.length;
-      for (const seg of segments) {
-        arcs.push({ ...seg, start, sweep });
-        start += sweep;
-      }
-      return arcs;
+      return segments.map((seg, i) => ({ ...seg, start: i * sweep, sweep }));
     }
 
+    /* ─── Dessin ─── */
     function drawWheel(rotation) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const arcs = getArcs();
@@ -318,7 +293,6 @@
         const s = arc.start + rotation;
         const e = s + arc.sweep;
 
-        // Slice
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.arc(cx, cy, radius, s, e);
@@ -326,12 +300,11 @@
         ctx.fillStyle = arc.color;
         ctx.fill();
 
-        // Border
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.arc(cx, cy, radius, s, e);
         ctx.closePath();
-        ctx.strokeStyle = 'rgba(236, 238, 254, 0.2)';
+        ctx.strokeStyle = 'rgba(236,238,254,0.2)';
         ctx.lineWidth = 2;
         ctx.stroke();
 
@@ -339,64 +312,57 @@
         ctx.translate(cx, cy);
         ctx.rotate(s + arc.sweep / 2);
 
-        // Image → outer zone (near rim)
-        if (arc.image && loadedImages[arc.image] && loadedImages[arc.image].complete) {
-          const imgSize = 48;
-          const imgCenterX = radius - 38; // 158px from center, close to rim
-          ctx.drawImage(loadedImages[arc.image], imgCenterX - imgSize / 2, -imgSize / 2, imgSize, imgSize);
+        if (arc.image && loadedImages[arc.image]?.naturalWidth > 0) {
+          const imgSize = 52;
+          const imgCx = radius - 70;
+          ctx.drawImage(loadedImages[arc.image], imgCx - imgSize / 2, -imgSize / 2, imgSize, imgSize);
         }
-
-        // Label → inner zone (away from image)
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#ECEEFE';
-        ctx.font = 'bold 15px Segoe UI';
-        ctx.shadowColor = 'rgba(0,0,0,0.6)';
-        ctx.shadowBlur = 4;
-
-        const lines = arc.label.split('\n');
-        const lineH = 18;
-        // With image: push text to inner half; without: center in slice
-        const textR = arc.image ? radius - 100 : radius - 16;
-        lines.forEach((line, i) => {
-          const yOff = (i - (lines.length - 1) / 2) * lineH;
-          ctx.fillText(line, textR, yOff + 5);
-        });
 
         ctx.restore();
       }
 
-      // Outer ring
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
-      ctx.strokeStyle = 'rgba(236, 238, 254, 0.15)';
+      ctx.strokeStyle = 'rgba(236,238,254,0.15)';
       ctx.lineWidth = 6;
       ctx.stroke();
     }
 
-    // Build legend
+    /* ─── Légende ─── */
     const legendEl = document.getElementById('legend');
-    for (const seg of segments) {
-      const item = document.createElement('div');
-      item.className = 'legend-item';
-      item.innerHTML = `<div class="legend-dot" style="background:${seg.color}; border: 1px solid rgba(236,238,254,0.3)"></div>${seg.label.replace('\n', ' ')}`;
-      legendEl.appendChild(item);
-    }
+    [
+      { label: '1 Booster Pokémon', color: '#0D23C9' },
+      { label: 'Une Paire Offerte', color: '#4A5EE8' },
+      { label: 'Paire de AirPods',  color: '#3347D4' },
+    ].forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'legend-item';
+      el.innerHTML = `<div class="legend-dot" style="background:${item.color}"></div>${item.label}`;
+      legendEl.appendChild(el);
+    });
 
-    preloadImages(() => drawWheel(currentAngle));
+    /* ─── Compteur (caché) ─── */
+    function updateCounter() {}
 
+    /* ─── Gagnant ─── */
     function pickWinner() {
-      const r = Math.random() * total;
-      let acc = 0;
-      for (let i = 0; i < segments.length; i++) {
-        acc += segments[i].weight;
-        if (r < acc) return i;
+      if (spinCount % 100 === 0) return segments.findIndex(s => s.id === 'airpods');
+      const eligible = segments.filter(s => s.id !== 'airpods');
+      const total = eligible.reduce((s, x) => s + x.weight, 0);
+      let r = Math.random() * total;
+      for (const seg of eligible) {
+        r -= seg.weight;
+        if (r < 0) return segments.indexOf(seg);
       }
-      return segments.length - 1;
+      return segments.indexOf(eligible[eligible.length - 1]);
     }
 
+    /* ─── Spin ─── */
     function spin() {
       if (spinning) return;
       spinning = true;
+      spinCount++;
+      localStorage.setItem('spinCount', spinCount);
       document.getElementById('spinBtn').disabled = true;
 
       const arcs = getArcs();
@@ -404,31 +370,25 @@
       const winnerArc = arcs[winnerIndex];
 
       const extraSpins = (5 + Math.floor(Math.random() * 4)) * 2 * Math.PI;
-      const winnerMid = winnerArc.start + winnerArc.sweep / 2;
-      const jitter = (Math.random() - 0.5) * winnerArc.sweep * 0.6;
+      const winnerMid  = winnerArc.start + winnerArc.sweep / 2;
+      const jitter     = (Math.random() - 0.5) * winnerArc.sweep * 0.6;
       const targetAngle = -winnerMid - jitter;
+      const finalAngle  = currentAngle + (targetAngle - currentAngle % (2 * Math.PI) + 2 * Math.PI * 10 + extraSpins);
 
-      const delta = (targetAngle - currentAngle % (2 * Math.PI) + 2 * Math.PI * 10 + extraSpins);
-      const finalAngle = currentAngle + delta;
-
-      const duration = 4500 + Math.random() * 1000;
+      const duration  = 4500 + Math.random() * 1000;
       const startAngle = currentAngle;
-      const startTime = performance.now();
-
-      function easeOut(t) {
-        return 1 - Math.pow(1 - t, 4);
-      }
+      const startTime  = performance.now();
+      const easeOut = t => 1 - Math.pow(1 - t, 4);
 
       function frame(now) {
-        const elapsed = now - startTime;
-        const t = Math.min(elapsed / duration, 1);
+        const t = Math.min((now - startTime) / duration, 1);
         currentAngle = startAngle + (finalAngle - startAngle) * easeOut(t);
         drawWheel(currentAngle);
-
         if (t < 1) {
           requestAnimationFrame(frame);
         } else {
           currentAngle = finalAngle;
+          localStorage.setItem('wheelAngle', currentAngle);
           spinning = false;
           showResult(winnerIndex);
         }
@@ -437,16 +397,13 @@
       requestAnimationFrame(frame);
     }
 
+    /* ─── Résultat ─── */
     function showResult(index) {
       const seg = segments[index];
       const mediaEl = document.getElementById('resultMedia');
-
-      if (seg.image && loadedImages[seg.image]) {
-        mediaEl.innerHTML = `<img class="result-img" src="${seg.image}" alt="${seg.label}">`;
-      } else {
-        mediaEl.innerHTML = `<div class="result-emoji">${seg.emoji}</div>`;
-      }
-
+      mediaEl.innerHTML = (seg.image && loadedImages[seg.image]?.naturalWidth > 0)
+        ? `<img class="result-img" src="${seg.image}" alt="${seg.label}">`
+        : `<div class="result-emoji">${seg.emoji ?? '🎁'}</div>`;
       document.getElementById('resultPrize').textContent = seg.label.replace('\n', ' ');
       document.getElementById('resultOverlay').classList.add('show');
     }
@@ -455,6 +412,9 @@
       document.getElementById('resultOverlay').classList.remove('show');
       document.getElementById('spinBtn').disabled = false;
     }
+
+    /* ─── Init ─── */
+    preloadImages(() => drawWheel(currentAngle));
   </script>
 </body>
 </html>
